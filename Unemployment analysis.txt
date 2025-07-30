@@ -1,0 +1,70 @@
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+from statsmodels.tsa.seasonal import seasonal_decompose
+
+
+file_path = "Unemployment in India.csv"
+df = pd.read_csv(file_path)
+
+
+df.columns = df.columns.str.strip()
+df['Date'] = df['Date'].str.strip()
+
+
+df['Date'] = pd.to_datetime(df['Date'], format='%d-%m-%Y', errors='coerce')
+
+
+df = df.dropna(subset=['Date', 'Region'])
+
+
+df = df.sort_values('Date')
+
+
+monthly_unemployment = df.groupby('Date')['Estimated Unemployment Rate (%)'].mean()
+
+
+plt.figure(figsize=(12, 6))
+plt.plot(monthly_unemployment.index, monthly_unemployment.values, marker='o', color='blue')
+plt.axvspan(pd.to_datetime('2020-03-01'), pd.to_datetime('2020-12-31'),
+            color='red', alpha=0.2, label='COVID-19 Impact')
+plt.title('India Monthly Average Unemployment Rate (2019-2020)')
+plt.xlabel('Date')
+plt.ylabel('Unemployment Rate (%)')
+plt.legend()
+plt.grid(True)
+plt.tight_layout()
+plt.show()
+
+
+plt.figure(figsize=(10, 6))
+sns.boxplot(x='Area', y='Estimated Unemployment Rate (%)', data=df)
+plt.title('Unemployment Rate Distribution by Area')
+plt.show()
+
+
+region_avg = df.groupby('Region')['Estimated Unemployment Rate (%)'].mean().sort_values(ascending=False)
+plt.figure(figsize=(8, 10))
+sns.barplot(x=region_avg.values, y=region_avg.index, palette='viridis')
+plt.title('Average Unemployment Rate by State')
+plt.xlabel('Unemployment Rate (%)')
+plt.ylabel('Region')
+plt.show()
+
+pre_covid = df[df['Date'] < '2020-03-01']['Estimated Unemployment Rate (%)'].mean()
+covid_period = df[(df['Date'] >= '2020-03-01') & (df['Date'] <= '2020-12-31')]['Estimated Unemployment Rate (%)'].mean()
+post_covid = df[df['Date'] > '2020-12-31']['Estimated Unemployment Rate (%)'].mean()
+
+print(f"Pre-COVID Average: {pre_covid:.2f}%")
+print(f"COVID Period Average: {covid_period:.2f}%")
+print(f"Post-COVID Average: {post_covid:.2f}%")
+
+
+monthly_unemployment = monthly_unemployment.asfreq('M')  # ensure monthly frequency
+result = seasonal_decompose(monthly_unemployment, model='additive')
+
+plt.figure(figsize=(12, 8))
+result.plot()
+plt.suptitle('Seasonal Decomposition of Unemployment Rate', fontsize=16)
+plt.tight_layout()
+plt.show()
